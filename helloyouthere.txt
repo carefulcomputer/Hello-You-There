@@ -1,0 +1,62 @@
+[custom-kidsrevenge]
+; initialize parameters
+exten => s,1,Set(FOUR_YEAR_OLD_COUNT=0)
+exten => s,n,Set(SIX_YEAR_OLD_COUNT=1)
+exten => s,n,Set(SIX_YEAR_OLD_HELLO=1)
+; start recording and answer
+exten => s,n,Set(CALLFILENAME=telekids-${STRFTIME(${EPOCH},,%Y%m%d-%H%M%S)})
+exten => s,n,Monitor(wav,${CALLFILENAME},m)
+exten => s,n,Ringing
+exten => s,n,Wait(7)
+exten => s,n,Answer
+; start the fun
+exten => s,n,Playback(telekids/1silence)
+exten => s,n,Goto(fouryearoldloop,s,1)
+ 
+[fouryearoldloop]
+; fouryearold doesn't have hellos, so just keep incrementing regardless of silence or talk
+exten => s,1,Set(FOUR_YEAR_OLD_COUNT=$[${FOUR_YEAR_OLD_COUNT} + 1])
+; if all of fouryearold's voices are done then move over to sixyearold
+exten => s,n,GoToIf($["${FOUR_YEAR_OLD_COUNT}" = "7"]?sixyearold,s,1)
+exten => s,n,Playback(telekids/fouryearold/${FOUR_YEAR_OLD_COUNT})
+exten => s,n,BackgroundDetect(telekids/10silence,600,200,110000)
+exten => s,n,Goto(fouryearoldloop,s,1)
+exten => talk,1,Goto(fouryearoldloop,s,1)
+ 
+[sixyearold]
+; only play these sounds once
+exten => s,1,Playback(telekids/sixyearold/a_GiveItToMeLetMeTalk)
+exten => s,n,Wait(1)
+exten => s,n,Playback(telekids/sixyearold/a_doYouWantToSpeakToDad)
+exten => s,n,Wait(2)
+; after playing move to sixyearold loop
+exten => s,n,Goto(sixyearoldloop,s,1)
+ 
+[sixyearoldloop]
+; check of silence and if silence is detected, jump to hello loop
+exten => s,1,BackgroundDetect(telekids/sixyearold/${SIX_YEAR_OLD_COUNT},600,200,110000)
+exten => s,n,BackgroundDetect(telekids/10silence,600,200,110000)
+exten => s,n,Goto(sixyearold_hello_loop,s,1)
+; voice detected so play sound and increment
+exten => talk,1,Set(SIX_YEAR_OLD_HELLO=1)
+exten => talk,n,Set(SIX_YEAR_OLD_COUNT=$[${SIX_YEAR_OLD_COUNT} + 1])
+exten => talk,n,GoToIf($["${SIX_YEAR_OLD_COUNT}" = "10"]?resetsixyearold,s,1:sixyearoldloop,s,1)
+; this will probably never be called
+exten => s,n,Hangup()
+ 
+[sixyearold_hello_loop]
+; play hello and increment hello counter
+exten => s,1,Playback(telekids/sixyearoldhellos/${RAND(1,7)})
+exten => s,2,Set(SIX_YEAR_OLD_HELLO=$[${SIX_YEAR_OLD_HELLO} + 1])
+; if hello is played 7 times then hangup
+exten => s,3,GoToIf($["${SIX_YEAR_OLD_HELLO}" = "7"]?dohangup,s,1:sixyearoldloop,s,1)
+ 
+[resetsixyearold]
+; if other side keeps speaking then start over
+exten => s,1,Set(SIX_YEAR_OLD_COUNT=1)
+exten => s,2,Set(SIX_YEAR_OLD_HELLO=1)
+exten => s,3,Goto(sixyearoldloop,s,1)
+ 
+[dohangup]
+; bye bye
+exten => s,1,Hangup
