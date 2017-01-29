@@ -1,6 +1,7 @@
 [Kids]
 exten => s,1,Answer()
 same => n,Set(i=0)
+same => n,MixMonitor(kids-${UNIQUEID}.wav)
 same => n,Goto(talk,1)
 
 ; Based off of 18 states.
@@ -9,9 +10,6 @@ same => n,Goto(talk,1)
 ;  > 10-17 6 year old talking. Resets back to 10 when done.
 
 exten => talk,1,Set(i=${IF($[${i} >= 18]?10:$[0${i}+1])})
-
-; Turn on recording first time through.
-same => n,ExecIf($[${i}=1]?MixMonitor(kids-${UNIQUEID}.wav))
 
 ; First 8 recordings are of the 4 year old, after than move on
 same => n,GotoIf($[${i} >= 9]?phonegrab)
